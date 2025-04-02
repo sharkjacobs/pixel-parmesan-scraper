@@ -57,6 +57,15 @@ curl -s -L "$URL" -o "$TEMP_FILE" || {
   exit 1
 }
 
+# Check for 504 Gateway Timeout or other error responses in the content
+if grep -q "504 Gateway Timeout" "$TEMP_FILE" ||
+   grep -q "<title>5[0-9][0-9] " "$TEMP_FILE" ||
+   grep -q "Gateway Timeout" "$TEMP_FILE"; then
+  echo "Error: Received a 504 Gateway Timeout or other server error response"
+  rm -f "$TEMP_FILE"
+  exit 1
+fi
+
 # Get file extension based on MIME type
 EXTENSION=$(get_file_extension "$TEMP_FILE")
 
