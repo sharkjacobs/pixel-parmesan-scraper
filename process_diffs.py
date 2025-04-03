@@ -244,6 +244,11 @@ def update_feed(html_content: str, feed_path: str, source_url: str) -> int:
     if new_items_added > 0:
         if tree is None:
             tree = ET.ElementTree(root)
+
+        # Format the XML with proper indentation
+        ET.indent(tree, space="  ")
+
+        # Write to file with XML declaration
         tree.write(feed_path, encoding='utf-8', xml_declaration=True)
         print(f"RSS feed updated with {new_items_added} new item(s) and saved to {feed_path}")
     else:
