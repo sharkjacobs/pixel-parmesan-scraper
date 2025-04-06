@@ -55,3 +55,10 @@ jobs:
         git commit -m "${timestamp}" || exit 0
         git pull --rebase
         git push
+        
+    - name: Trigger publish workflow
+      if: success() && steps.commit.outcome == 'success'
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event-type: publish-event
