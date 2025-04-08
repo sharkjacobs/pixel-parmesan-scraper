@@ -6,26 +6,23 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Optional, Tuple, Set
 
+def read_html_file(file_path: str) -> str:
+    """Read the HTML content from a file."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+        return ""
 
-def get_unstaged_diff() -> str:
-    """Get the diff for unstaged changes."""
-    result = subprocess.run(
-        ["git", "diff"],
-        capture_output=True,
-        text=True
-    )
-    return result.stdout
-
-
-def extract_gallery_links(diff_content: str) -> List[str]:
-    """Extract gallery links from diff content."""
+def extract_gallery_links(html_content: str) -> List[str]:
+    """Extract all gallery links from HTML content."""
     gallery_links = []
 
-    # Look for added lines containing gallery items
-    # Pattern matches lines like: +<a class="gallery-item" href="https://example.com/gallery/item">
-    pattern = r'\+\s*<a\s+class="gallery-item"\s+href="([^"]+)">'
+    # Pattern matches lines like: <a class="gallery-item" href="https://example.com/gallery/item">
+    pattern = r'<a\s+class="gallery-item"\s+href="([^"]+)">'
 
-    for match in re.finditer(pattern, diff_content):
+    for match in re.finditer(pattern, html_content):
         gallery_links.append(match.group(1))
 
     return gallery_links
@@ -258,15 +255,39 @@ def update_feed(html_content: str, feed_path: str, source_url: str) -> int:
 
 
 def main():
-    feed_path = 'feed.rss'
-    # Get the unstaged diff
-    diff_content = get_unstaged_diff()
+    # List of HTML files to process
+    html_file_paths = [
+        'pixelparmesan.com-gallery.html',
+        'pixelparmesan.com-spicy.html'
+    ]
+    gallery_links = []
+    for html_file_path in html_file_paths:
+        print(f"Processing HTML file: {html_file_path}")
+        # Read the HTML file
+        html_content = read_html_file(html_file_path)
+        if not html_content:
+            print(f"Could not read HTML content from {html_file_path}")
+            continue
 
-    # Extract gallery links
-    gallery_links = extract_gallery_links(diff_content)
+        # Extract gallery links and add to list
+        links = extract_gallery_links(html_content)
+        print(f"Found {len(links)} gallery links in {html_file_path}")
+        gallery_links.extend(links)
 
-    if gallery_links:
-        print(f"Found {len(gallery_links)} new gallery items")
+    if gallery_links and len(gallery_links) > 0:
+        print(f"Found {len(gallery_links)} gallery items")
+
+        feed_path = 'feed.rss'
+        try:
+            # Check if the file exists
+            if os.path.isfile(feed_path):
+                os.remove(feed_path)
+                print(f"File '{feed_path}' has been deleted.")
+            else:
+                print(f"File '{feed_path}' does not exist.")
+        except Exception as e:
+            print(f"An error occurred while trying to delete '{feed_path}': {e}")
+
         total_items_added = 0
         for url in gallery_links:
             html_content = fetch_html_content(url)
